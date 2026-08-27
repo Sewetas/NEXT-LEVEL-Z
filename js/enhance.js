@@ -145,6 +145,42 @@
     if (actions) actions.prepend(badge);
   }
 
+  function addMobileNav() {
+    if (window.innerWidth > 900 || document.querySelector('.nl-mobile-nav')) return;
+    const base = page === 'home' ? '' : '../';
+    const items = [
+      ['home','⌂','Inicio','index.html'],
+      ['aprender','◈','Aprender','pages/aprender.html'],
+      ['juegos','◆','Juegos','pages/juegos.html'],
+      ['retos','⚡','Retos','pages/retos.html'],
+      ['perfil','●','Perfil','pages/perfil.html']
+    ];
+    const nav = document.createElement('nav');
+    nav.className = 'nl-mobile-nav';
+    nav.setAttribute('aria-label', 'Navegación móvil');
+    nav.innerHTML = items.map(([id,icon,label,path]) => `<a class="${page===id?'active':''}" href="${base}${path}"><span>${icon}</span><small>${label}</small></a>`).join('');
+    document.body.appendChild(nav);
+    const refresh = () => {
+      if (window.innerWidth <= 900) nav.classList.add('show');
+      else nav.classList.remove('show');
+    };
+    window.addEventListener('resize', refresh, { passive: true });
+    refresh();
+  }
+
+  function addBackToTop() {
+    const btn = document.createElement('button');
+    btn.className = 'nl-back-top';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Volver arriba');
+    btn.innerHTML = '↑';
+    document.body.appendChild(btn);
+    const update = () => btn.classList.toggle('show', window.scrollY > 420);
+    window.addEventListener('scroll', update, { passive: true });
+    btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: prefersReduced ? 'auto' : 'smooth' }));
+    update();
+  }
+
   function init() {
     addScrollProgress();
     addAmbientParticles();
@@ -154,6 +190,8 @@
     addKeyboardFocus();
     addLevelCelebrationObserver();
     addGreetingBadge();
+    addMobileNav();
+    addBackToTop();
     document.body.classList.add('nl-enhanced');
   }
 
