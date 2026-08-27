@@ -22,30 +22,32 @@
   const courses=(typeof CURSOS!=='undefined'&&Array.isArray(CURSOS))?CURSOS:(window.CURSOS||[]);
   const topicIds={};COURSE_IDS.forEach(id=>topicIds[id]=new Set());
   courses.forEach(c=>(c.temas||[]).forEach(t=>topicIds[c.id]?.add(t.id)));
-  const completedTopics=out.completados.temas;
-  const completedSet=new Set(completedTopics);
+  const completedSet=new Set(out.completados.temas);
   const completedByCourse={};COURSE_IDS.forEach(id=>completedByCourse[id]=0);
-  COURSE_IDS.forEach(id=>{topicIds[id].forEach(t=>{if(completedSet.has(t))completedByCourse[id]++;});});
+  COURSE_IDS.forEach(id=>topicIds[id].forEach(t=>{if(completedSet.has(t))completedByCourse[id]++;}));
+
+  // Los intentos de quiz se usan SOLO para dominio/precisión, nunca para inflar el avance del curso.
   const attempts={};const correct={};COURSE_IDS.forEach(id=>{attempts[id]=0;correct[id]=0;});
   for(const r of out.resultados){const c=resultCourse(r);const ok=resultCorrect(r);if(c&&ok!==null){attempts[c]++;if(ok)correct[c]++;}}
-  const activityFallback=out.stats.porCurso||{};
+
   COURSE_IDS.forEach(id=>{
    const totalTopics=topicIds[id].size;
    const topicCompletion=totalTopics?Math.round(completedByCourse[id]/totalTopics*100):0;
    const precision=attempts[id]?Math.round(correct[id]/attempts[id]*100):0;
-   const quizWeight=attempts[id]?0.4:0;
-   const topicWeight=attempts[id]?0.6:1;
-   let mastery=Math.round(topicCompletion*topicWeight+precision*quizWeight);
-   if(!attempts[id]&&topicCompletion===0&&num(out.progreso[id])>0&&num(activityFallback[id])>0){mastery=Math.min(100,num(out.progreso[id]));}
-   out.dominio[id]=mastery;
-   out.progreso[id]=mastery;
-   out.actividadesPorCurso[id]=attempts[id]+completedByCourse[id];
+   // Avance: únicamente temas completados.
+   out.progreso[id]=topicCompletion;
+   // Dominio: precisión en preguntas cuando existe evidencia; si aún no hay quizzes, refleja el avance de temas.
    out.precisionPorCurso[id]=precision;
+   out.dominio[id]=attempts[id]?Math.round(topicCompletion*.6+precision*.4):topicCompletion;
+   out.actividadesPorCurso[id]=completedByCourse[id]+attempts[id];
    out.temasPorCurso[id]=completedByCourse[id];
   });
+
+  out.stats.temas=completedSet.size;
+  out.stats.retos=out.completados.retos.length;
+  out.stats.quizzes=out.resultados.length;
   out.stats.actividades=COURSE_IDS.reduce((s,id)=>s+out.actividadesPorCurso[id],0)+out.stats.retos;
-  out.stats.temas=completedTopics.length;out.stats.quizzes=out.resultados.length;
-  out.stats.porCurso={...out.stats.porCurso};
+  // Mantiene compatibilidad con el dashboard existente: porCurso representa actividades, no porcentaje.
   COURSE_IDS.forEach(id=>out.stats.porCurso[id]=out.actividadesPorCurso[id]);
  }
  function normalize(base,data){
